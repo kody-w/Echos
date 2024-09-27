@@ -3,142 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Echo Pokedex</title>
+    <title>Echo Codex with Battle</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f0f0f0;
+            background-color: #f4f4f4;
         }
-        h1 {
-            text-align: center;
+        h1, h2, h3 {
             color: #2c3e50;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         .upload-section {
             margin-bottom: 20px;
         }
+        #file-input, #github-url, #load-github, #battle-button {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        #github-url {
+            width: 50%;
+            padding: 5px;
+        }
         #error-message {
             color: #e74c3c;
-            margin-bottom: 20px;
             font-weight: bold;
         }
-        #echo-display {
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        #echo-display, #battle-result {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
         }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        .echo-card {
+            width: 48%;
         }
-        ul {
-            padding-left: 20px;
-        }
-        blockquote {
-            font-style: italic;
-            border-left: 3px solid #3498db;
-            padding-left: 10px;
-            margin-left: 0;
-            background-color: #ecf0f1;
-        }
-        #echo-image {
+        .echo-image {
             max-width: 100%;
             height: auto;
-            display: block;
-            margin: 0 auto 20px;
-            border-radius: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .stat-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .stat-item {
+            background-color: #ecf0f1;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #battle-result {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <h1>Echo Pokedex</h1>
-    
-    <div class="upload-section">
-        <input type="file" id="json-upload" accept=".json">
+    <div class="container">
+        <h1>Echo Codex with Battle</h1>
+        
+        <div class="upload-section">
+            <input type="file" id="file-input" accept=".json">
+            <input type="text" id="github-url" placeholder="Enter GitHub JSON URL">
+            <button id="load-github">Load from GitHub</button>
+            <button id="battle-button" disabled>Battle!</button>
+        </div>
+
+        <div id="error-message"></div>
+        <div id="echo-display"></div>
+        <div id="battle-result"></div>
     </div>
-    
-    <div id="error-message"></div>
-    
-    <div id="echo-display"></div>
 
     <script>
-        let echoData = null;
+        const fileInput = document.getElementById('file-input');
+        const githubUrlInput = document.getElementById('github-url');
+        const loadGithubButton = document.getElementById('load-github');
+        const battleButton = document.getElementById('battle-button');
+        const errorMessage = document.getElementById('error-message');
+        const echoDisplay = document.getElementById('echo-display');
+        const battleResult = document.getElementById('battle-result');
 
-        document.getElementById('json-upload').addEventListener('change', handleJSONUpload);
+        let echo1 = null;
+        let echo2 = null;
 
-        function handleJSONUpload(event) {
+        fileInput.addEventListener('change', handleFileUpload);
+        loadGithubButton.addEventListener('click', loadFromGithub);
+        battleButton.addEventListener('click', battle);
+
+        function handleFileUpload(event) {
             const file = event.target.files[0];
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    echoData = data.attributes;
-                    document.getElementById('error-message').textContent = '';
-                    displayEcho(data);
-                } catch (err) {
-                    document.getElementById('error-message').textContent = "Error parsing JSON file. Please make sure it's a valid JSON file.";
-                    document.getElementById('echo-display').innerHTML = '';
-                }
-            };
-            
-            reader.readAsText(file);
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        console.log('Parsed data:', data);
+                        echo1 = data;
+                        displayEchoData();
+                    } catch (error) {
+                        showError('Error parsing JSON file: ' + error.message);
+                        console.error('Full error:', error);
+                    }
+                };
+                reader.readAsText(file);
+            }
         }
 
-        function displayEcho(data) {
-            if (!echoData) return;
-
-            const displayDiv = document.getElementById('echo-display');
-            let imageHTML = '';
-            
-            if (echoData.image && echoData.image.data) {
-                const imageData = `data:image/${echoData.image.format.toLowerCase()};base64,${echoData.image.data}`;
-                imageHTML = `<img id="echo-image" src="${imageData}" alt="Echo Image">`;
+        function loadFromGithub() {
+            const url = githubUrlInput.value.trim();
+            if (!url) {
+                showError('Please enter a GitHub JSON URL');
+                return;
             }
 
-            displayDiv.innerHTML = `
-                ${imageHTML}
-                <h2>${echoData.name}</h2>
-                <div class="grid">
-                    <div>
-                        <p><strong>Type:</strong> ${echoData.type}</p>
-                        <p><strong>Elemental Affinity:</strong> ${echoData.elemental_affinity}</p>
-                        <p><strong>Rarity:</strong> ${echoData.rarity}</p>
-                        <p><strong>Size:</strong> ${echoData.size}</p>
-                        <p><strong>Habitat:</strong> ${echoData.habitat}</p>
-                        <p><strong>Evolution Stage:</strong> ${echoData.evolution_stage}</p>
-                    </div>
-                    <div>
-                        <p><strong>Abilities:</strong></p>
-                        <ul>
-                            ${echoData.abilities.map(ability => `<li>${ability}</li>`).join('')}
-                        </ul>
-                        <p><strong>Weaknesses:</strong></p>
-                        <ul>
-                            ${echoData.weaknesses.map(weakness => `<li>${weakness}</li>`).join('')}
-                        </ul>
-                        <p><strong>Strengths:</strong></p>
-                        <ul>
-                            ${echoData.strengths.map(strength => `<li>${strength}</li>`).join('')}
-                        </ul>
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Parsed data:', data);
+                    echo2 = data;
+                    displayEchoData();
+                })
+                .catch(error => {
+                    showError('Error loading data from GitHub: ' + error.message);
+                    console.error('Full error:', error);
+                });
+        }
+
+        function displayEchoData() {
+            errorMessage.textContent = '';
+            echoDisplay.innerHTML = '';
+            battleResult.innerHTML = '';
+
+            if (echo1) {
+                echoDisplay.innerHTML += createEchoCard(echo1, 'Echo 1');
+            }
+            if (echo2) {
+                echoDisplay.innerHTML += createEchoCard(echo2, 'Echo 2');
+            }
+
+            battleButton.disabled = !(echo1 && echo2);
+        }
+
+        function createEchoCard(data, title) {
+            const attr = data.attributes;
+            return `
+                <div class="echo-card">
+                    <h2>${title}: ${attr.name}</h2>
+                    <img src="data:${attr.image.format};base64,${attr.image.data}" alt="${attr.name}" class="echo-image">
+                    <p><strong>Type:</strong> ${attr.type}</p>
+                    <p><strong>Elemental Affinity:</strong> ${attr.elemental_affinity}</p>
+                    <h3>Base Stats</h3>
+                    <div class="stat-list">
+                        ${Object.entries(attr.base_stats).map(([stat, value]) => `<div class="stat-item"><strong>${stat}:</strong> ${value}</div>`).join('')}
                     </div>
                 </div>
-                <p><strong>Personality:</strong> ${echoData.personality}</p>
-                <p><strong>Origin:</strong> ${echoData.origin}</p>
-                <p><strong>Description:</strong> ${echoData.description}</p>
-                <div>
-                    <p><strong>Motivational Quote:</strong></p>
-                    <blockquote>${echoData.motivational_quote}</blockquote>
-                </div>
-                <h3>Extended Lore</h3>
-                <div>${data.extended_lore}</div>
             `;
+        }
+
+        function battle() {
+            if (!echo1 || !echo2) {
+                showError('Please load both Echoes before battling');
+                return;
+            }
+
+            const score1 = calculateBattleScore(echo1);
+            const score2 = calculateBattleScore(echo2);
+
+            let result;
+            if (score1 > score2) {
+                result = `${echo1.attributes.name} wins!`;
+            } else if (score2 > score1) {
+                result = `${echo2.attributes.name} wins!`;
+            } else {
+                result = "It's a tie!";
+            }
+
+            battleResult.innerHTML = `
+                <h2>Battle Result</h2>
+                <p>${echo1.attributes.name}: ${score1} points</p>
+                <p>${echo2.attributes.name}: ${score2} points</p>
+                <p>${result}</p>
+            `;
+        }
+
+        function calculateBattleScore(echo) {
+            const stats = echo.attributes.base_stats;
+            return Object.values(stats).reduce((a, b) => a + b, 0);
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
         }
     </script>
 </body>
