@@ -1,0 +1,13 @@
+{
+  "name": "CustomMon",
+  "id": 999,
+  "echo_values": {
+    "attack": 750,
+    "defense": 600,
+    "speed": 400
+  },
+  "image": {
+    "data": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png"
+  },
+  "description": "A mysterious Pokémon with unmatched power."
+}
